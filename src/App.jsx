@@ -1,3 +1,4 @@
+import { createRoot } from 'react-dom/client';
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, push, onValue, onChildAdded, remove, update, off, onDisconnect } from "firebase/database";
@@ -201,3 +202,6 @@ export default function App() {
     </div>
   );
 }
+const container = document.getElementById('root');
+const root = createRoot(container);
+root.render(<App />);
