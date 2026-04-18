@@ -25,7 +25,7 @@ const LOCATION_DATA = {
   "其他国家 (Others)": ["亚洲其他", "美洲", "欧洲", "大洋洲"]
 };
 
-// --- 顶部状态进度条组件 (真实男女比例) ---
+// --- 顶部状态进度条组件 ---
 const StatusBar = ({ maleRatio, femaleRatio }) => (
   <div className="w-full bg-white shadow-sm z-10 relative">
     <div className="flex h-1.5 w-full transition-all duration-1000">
@@ -61,7 +61,6 @@ export default function App() {
   const [genderRatio, setGenderRatio] = useState({ m: 50, f: 50 });
   const messagesEndRef = useRef(null);
 
-  // 消息自动触底
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -205,18 +204,30 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-200 p-8 font-sans">
         <h1 className="text-xl font-bold mb-6 flex items-center gap-2 text-red-500"><ShieldAlert /> 上帝视角</h1>
-        <div className="grid gap-4">
+        <div className="grid gap-6">
           {Object.entries(allRooms).map(([id, data]) => (
-            <div key={id} className="bg-slate-800 p-5 rounded-3xl border border-slate-700 flex justify-between items-center shadow-2xl">
-              <div>
+            <div key={id} className="bg-slate-800 p-6 rounded-3xl border border-slate-700 flex flex-col shadow-2xl">
+              <div className="flex justify-between items-center mb-4">
                 <p className="font-bold text-white text-base">{data.userA?.alias} ↔ {data.userB?.alias || '等待中...'}</p>
-                <div className="mt-2 text-xs text-blue-300 italic">
-                  最新消息: {data.messages ? Object.values(data.messages).pop().text : '尚未开始'}
-                </div>
+                <button onClick={() => remove(ref(db, `rooms/${id}`))} className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all active:scale-90">
+                  <Trash2 size={20} />
+                </button>
               </div>
-              <button onClick={() => remove(ref(db, `rooms/${id}`))} className="p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all active:scale-90">
-                <Trash2 size={20} />
-              </button>
+              
+              {/* 这里就是新增的：完整聊天记录展示区 */}
+              <div className="bg-slate-900 p-4 rounded-2xl max-h-48 overflow-y-auto space-y-2 border border-slate-800 shadow-inner">
+                {data.messages ? (
+                  Object.values(data.messages).map((msg, index) => (
+                    <div key={index} className="text-sm">
+                      <span className="font-bold text-slate-400">[{msg.senderAlias}]: </span>
+                      <span className="text-slate-200">{msg.text}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-slate-500 italic text-center py-2">还没开始讲废话...</div>
+                )}
+              </div>
+
             </div>
           ))}
         </div>
@@ -323,7 +334,7 @@ export default function App() {
   );
 }
 
-// --- 安全的挂载代码 (修复 Vercel 崩溃) ---
+// --- 安全的挂载代码 ---
 if (typeof window !== 'undefined') {
   const container = document.getElementById('root');
   if (container && !window.__HAS_MOUNTED__) {
