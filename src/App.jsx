@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import React, { useState, useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, push, onValue, onChildAdded, remove, update, off, onDisconnect } from "firebase/database";
 import { Send, SkipForward, Coffee, Zap, ShieldAlert, Trash2 } from 'lucide-react';
@@ -25,12 +26,12 @@ const LOCATION_DATA = {
   "其他国家 (Others)": ["亚洲其他", "美洲", "欧洲", "大洋洲"]
 };
 
-// --- 顶部状态进度条组件 ---
-const StatusBar = () => (
+// --- 顶部状态进度条组件 (真实男女比例) ---
+const StatusBar = ({ maleRatio, femaleRatio }) => (
   <div className="w-full bg-white shadow-sm z-10 relative">
-    <div className="flex h-1.5 w-full">
-      <div className="h-full bg-blue-400 animate-pulse" style={{ width: '50%' }}></div>
-      <div className="h-full bg-pink-400 animate-pulse" style={{ width: '50%' }}></div>
+    <div className="flex h-1.5 w-full transition-all duration-1000">
+      <div className="h-full bg-blue-400 transition-all duration-1000" style={{ width: `${maleRatio}%` }}></div>
+      <div className="h-full bg-pink-400 transition-all duration-1000" style={{ width: `${femaleRatio}%` }}></div>
     </div>
     <div className="px-4 py-2 flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
       <div className="flex items-center gap-2">
@@ -38,8 +39,8 @@ const StatusBar = () => (
         <span>已连线至全球废话服务器</span>
       </div>
       <div className="flex gap-3">
-        <span className="text-blue-500">♂ 50%</span>
-        <span className="text-pink-500">♀ 50%</span>
+        <span className="text-blue-500 transition-all">♂ {maleRatio}%</span>
+        <span className="text-pink-500 transition-all">♀ {femaleRatio}%</span>
       </div>
     </div>
   </div>
@@ -58,12 +59,40 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [allRooms, setAllRooms] = useState({}); 
+  const [genderRatio, setGenderRatio] = useState({ m: 50, f: 50 });
   const messagesEndRef = useRef(null);
 
   // 消息自动触底
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // 全局男女比例实时计算
+  useEffect(() => {
+    const roomsRef = ref(db, 'rooms');
+    const unsub = onValue(roomsRef, (snap) => {
+      let mCount = 0;
+      let fCount = 0;
+      if (snap.exists()) {
+        Object.values(snap.val()).forEach(room => {
+          if (room.userA?.gender === 'male') mCount++;
+          if (room.userA?.gender === 'female') fCount++;
+          if (room.userB?.gender === 'male') mCount++;
+          if (room.userB?.gender === 'female') fCount++;
+        });
+      }
+      const total = mCount + fCount;
+      if (total > 0) {
+        setGenderRatio({
+          m: Math.round((mCount / total) * 100),
+          f: Math.round((fCount / total) * 100)
+        });
+      } else {
+        setGenderRatio({ m: 50, f: 50 });
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // 上帝视角监听
   useEffect(() => {
@@ -200,7 +229,7 @@ export default function App() {
   if (appState === 'login') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-        <StatusBar />
+        <StatusBar maleRatio={genderRatio.m} femaleRatio={genderRatio.f} />
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="bg-white rounded-[48px] shadow-2xl w-full max-w-sm p-10 relative border border-white">
             <div className="text-center mb-10">
@@ -253,7 +282,7 @@ export default function App() {
   // 聊天主界面
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col h-screen overflow-hidden font-sans">
-      <StatusBar />
+      <StatusBar maleRatio={genderRatio.m} femaleRatio={genderRatio.f} />
       <div className="bg-white/90 backdrop-blur-md p-4 shadow-sm flex justify-between items-center sticky top-0 z-20 border-b border-slate-100">
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-[20px] flex items-center justify-center text-white font-black shadow-lg ${room.partner?.gender === 'female' ? 'bg-pink-400 shadow-pink-100' : 'bg-blue-400 shadow-blue-100'}`}>
@@ -293,6 +322,16 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+// --- 安全的挂载代码 (修复 Vercel 崩溃) ---
+if (typeof window !== 'undefined') {
+  const container = document.getElementById('root');
+  if (container && !window.__HAS_MOUNTED__) {
+    window.__HAS_MOUNTED__ = true;
+    const root = createRoot(container);
+    root.render(<App />);
+  }
 }
 
 const container = document.getElementById('root');
