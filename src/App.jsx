@@ -1,4 +1,3 @@
-import { createRoot } from 'react-dom/client';
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initializeApp } from "firebase/app";
@@ -333,7 +332,3 @@ if (typeof window !== 'undefined') {
     root.render(<App />);
   }
 }
-
-const container = document.getElementById('root');
-const root = createRoot(container);
-root.render(<App />);
